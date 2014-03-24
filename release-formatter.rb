@@ -820,21 +820,27 @@ class FileWriter
     @file.close
   end
 
+  def writeHeader(pathStr)
+    lines = []
+    open(pathStr, "r").each do |line| lines << line end.close
+    lines.each do |line|
+      @file.write line
+    end
+  end
 end
+
+
 
 # ========================================================= # 
 # group: main
 # ========================================================= # 
-# PATH = ARGV[0]
+PATH = ARGV[0]
 # PATH = "indent.org"
-# OUT = "indent-ref.org"
-# PATH = "grid-ref.org"
-# PATH = "grid-min.org"
-PATH = "grid.org"
+# PATH = "grid.org"
 # PATH = "test.org"
 # PATH = "newline.org"
 # PATH = "english-newline.org"
-# HeaderFile = "header.txt";
+HeaderPath = "header.txt"
 OUT = "out.org"
 puts "open file:" + PATH.to_s
 
@@ -855,6 +861,7 @@ correcter.unifyPunctuation(tree);
 # indenter = Indenter.new(tree, 0)
 # indenter.indent()
 fileWriter = FileWriter.new(tree, open(OUT, "w"))
+fileWriter.writeHeader(HeaderPath)
 fileWriter.orgWrite
 fileWriter.close
 
