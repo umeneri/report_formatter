@@ -58,9 +58,13 @@ newline [empty char / empty line]
 japanese / english / j + e
 ---
 
+** TODO
+root部分にリストでエラー
+
 =end
 
 require './wordChecker.rb'
+require 'date'                  # header用
 
 #! ruby -Ku
 # require "kconv"
@@ -501,6 +505,14 @@ class WordCorrector
   # カッコ内の余計な空白を除去
   def removeExcessiveSpaceInBracket(paragraph)
     word = /[.,．，。、「」"`!?;\s][\w\-]+$/  # 区切り文字+切れている単語のパターン
+    # bracket = /\(.+\)/
+  end
+
+  # 文全ての修正
+  def correct(tree)
+    unifyPunctuation(tree)
+    removeExcessivePunctuation(tree, "、")
+    removeExcessivePunctuation(tree, "。")
   end
 
 end
@@ -570,11 +582,21 @@ class LengthFormatter
     end
 
     # 文字をsからeまで数えて出力する
-    counter = 0
+    # counter = 0
+    # for i in s...str.length
+    #   if l <= counter then break end
+    #   if fullWidthAll? str[i] then counter +=2
+    #   else counter += 1
+    #   end
+    # end
+    fulls = 0                   # 全角文字数
+    halfs = 0                   # 半角文字数
     for i in s...str.length
-      if l <= counter then break end
-      if fullWidthAll? str[i] then counter +=2
-      else counter += 1
+      if fulls * 2 + halfs >= l then break # 文字数がlを超過したら終わり
+      end
+      if fullWidthAll? str[i]
+      then fulls += 1
+      else halfs += 1
       end
     end
     [s,i]
@@ -649,9 +671,10 @@ class LengthFormatter
 
   # 後方参照で、単語区切りの最後からの長さを探す(前に戻るという意味なので注意)
   # 2014/03/14 日本語も追加
+  # 2014/03/31 数字は除去
   def findDelemiterBackward(line)
     # delimiter = /[.,．，「」"`!?;\s]/ # 区切り文字 \s.include [space, \t, \n] 
-    word = /([^ -~｡-ﾟ]|[,．，「」"`!?;\s\d])[\w\-]+$/
+    word = /([^ -~｡-ﾟ]|[,．，「」"`!?;\s])[\w\-]+$/
     # 区切り文字+切れている単語のパターン
 
     # 切れている単語のインデックス
@@ -743,6 +766,7 @@ class FileWriter
     @file = file
   end
 
+  # ヘッダマークをorgヘッダに変換
   def toOrgHeaderMark(mark)
     if mark !~ TREE_HEADER
       p "error! mark is not valid in toOrgHeaderMark"
@@ -820,13 +844,46 @@ class FileWriter
     @file.close
   end
 
+  # ヘッダ文章を記入
   def writeHeader(pathStr)
     lines = []
     open(pathStr, "r").each do |line| lines << line end.close
     lines.each do |line|
+      line.gsub!("#today", getNowDate())
+      line.gsub!("#tuesday", getNearestDay(2))
+      line.gsub!("#wednesday", getNearestDay(3))
+      if line.index("#isDelayed") and Date.today.wday != 2 # 火曜日
+        line.sub!("#isDelayed", "遅れて申し訳ありませんでした。")
+      end
       @file.write line
     end
   end
+
+  def replaceKey(line, key, word)
+    line.gsub!(key, word)
+  end
+
+  # 今日の日付
+  def getNowDate()
+    Time.now().strftime("%Y/%m/%d")
+  end
+
+  # 直近のi曜日の日付を取得(今日は含まない)
+  def getNearestDay(i)
+    w = Date.today.wday
+    dec = w == i ? 7 : w > i ? w - i : 7 - (i - w)
+    getDate(-dec)
+  end
+
+  # 今日からiだけ遅れた日付を入手
+  def getDate(i)
+    # date = Time.now()
+    # date = date + 24 * 60 * 60 * i # add i day
+    date = Date.today
+    date = date + i
+    date.strftime("%Y/%m/%d")
+  end
+
 end
 
 
